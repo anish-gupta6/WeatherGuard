@@ -2,6 +2,10 @@
 
 WeatherGuard is a comprehensive weather alert platform that pushes secure, invite-only, hourly weather forecasts straight to your Telegram. It features a scalable Node.js backend using NestJS and a responsive React frontend powered by Vite and TailwindCSS.
 
+## Live Link
+
+- **Link** https://weather-guard-portal.web.app
+
 ## Project Structure
 
 This repository is organized into two main parts:
@@ -133,6 +137,3 @@ npm run dev
 - Google Auth Library
 - Telegraf (Telegram Bot API)
 
-## License
-
-This project is licensed under the MIT License.
