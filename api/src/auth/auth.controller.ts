@@ -30,20 +30,19 @@ export class AuthController {
 
       const frontendUrl = this.configService.get<string>('FRONTEND_URL');
       
-      const isProduction = process.env.NODE_ENV === 'production';
       
       res.cookie('access_token', tokens.accessToken, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax',
-        maxAge: 15 * 60 * 1000, // 15 minutes
+        secure: true,
+        sameSite: 'none',
+        maxAge: 15 * 60 * 1000, 
       });
 
       res.cookie('refresh_token', tokens.refreshToken, {
         httpOnly: true,
-        secure: isProduction,
-        sameSite: 'lax',
-        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        secure: true,
+        sameSite: 'none',
+        maxAge: 7 * 24 * 60 * 60 * 1000, 
       });
 
       res.status(HttpStatus.FOUND).redirect(`${frontendUrl}/auth-success`);
@@ -68,19 +67,18 @@ export class AuthController {
 
     const tokens = await this.authService.refreshTokens(refreshToken);
 
-    const isProduction = process.env.NODE_ENV === 'production';
       
     res.cookie('access_token', tokens.accessToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none',
       maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     res.cookie('refresh_token', tokens.refreshToken, {
       httpOnly: true,
-      secure: isProduction,
-      sameSite: 'lax',
+      secure: true,
+      sameSite: 'none',
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
