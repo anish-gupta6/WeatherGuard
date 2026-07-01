@@ -1,4 +1,4 @@
-import { Controller, Get, Logger, Query, Res, Req, Post, UnauthorizedException, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Controller, Get, Logger, Query, Res, Req, Post, UnauthorizedException, HttpCode, HttpStatus, UseGuards, Body } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import type { Response, Request } from 'express';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -20,7 +20,7 @@ export class AuthController {
   }
 
   @Get('google/callback')
-  async googleAuthRedirect(@Query('code') code: string, @Res() res: Response) {
+  async googleAuthRedirect(@Query('code') code: string, @Res({ passthrough: true }) res: Response) {
     if (!code) {
       throw new UnauthorizedException('No authorization code provided');
     }
@@ -28,57 +28,65 @@ export class AuthController {
     try {
       const tokens = await this.authService.loginWithCode(code);
 
+      const frontendUrl = this.configService.get<string>('FRONTEND_URL');
+      
+      const isProduction = process.env.NODE_ENV === 'production';
+      
       res.cookie('access_token', tokens.accessToken, {
         httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        maxAge: 15 * 60 * 1000,
+        secure: isProduction,
+        sameSite: 'lax',
+        maxAge: 15 * 60 * 1000, // 15 minutes
       });
 
       res.cookie('refresh_token', tokens.refreshToken, {
         httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000,
+        secure: isProduction,
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
       });
 
-      const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-      res.redirect(`${frontendUrl}/`);
+      res.status(HttpStatus.FOUND).redirect(`${frontendUrl}/auth-success`);
     } catch (error) {
       this.logger.error(
         'OAuth callback failed',
         error instanceof Error ? error.stack : error,
       );
       const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-      res.redirect(`${frontendUrl}/login?error=auth_failed`);
+      res.status(HttpStatus.FOUND).redirect(`${frontendUrl}/login?error=auth_failed`);
     }
   }
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refreshTokens(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies?.['refresh_token'];
+    const refreshToken = req.cookies['refresh_token'];
+    
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token missing');
     }
 
     const tokens = await this.authService.refreshTokens(refreshToken);
 
+    const isProduction = process.env.NODE_ENV === 'production';
+      
     res.cookie('access_token', tokens.accessToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: 15 * 60 * 1000,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 15 * 60 * 1000, // 15 minutes
     });
 
     res.cookie('refresh_token', tokens.refreshToken, {
       httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: 7 * 24 * 60 * 60 * 1000,
+      secure: isProduction,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
-    return { message: 'Tokens refreshed' };
+    return { 
+      message: 'Tokens refreshed' 
+    };
   }
 
   @UseGuards(JwtAuthGuard)

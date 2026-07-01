@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import { AdminProvider } from './admin/context/AdminContext';
 import Login from './portal/pages/Login';
+import AuthSuccess from './portal/pages/AuthSuccess';
 import Onboarding from './portal/pages/Onboarding';
 import UserDashboard from './portal/pages/UserDashboard';
 import AdminDashboard from './admin/pages/AdminDashboard';
@@ -52,6 +53,8 @@ function App() {
           path="/login"
           element={!user ? <Login /> : <Navigate to={user.role === 'ADMIN' || user.role === 'SUPER_ADMIN' ? '/admin' : '/user'} />}
         />
+
+        <Route path="/auth-success" element={<AuthSuccess />} />
 
         <Route
           path="/onboarding"
