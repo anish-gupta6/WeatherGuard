@@ -9,20 +9,55 @@ This repository is organized into two main parts:
 - **`api/`** - The NestJS backend application.
 - **`frontend/`** - The React + Vite frontend application.
 
-## Prerequisites
+## System Design
 
-Before you begin, ensure you have the following installed:
-- [Node.js](https://nodejs.org/) (v18 or higher recommended)
-- [npm](https://www.npmjs.com/) (v9 or higher recommended)
-- A MongoDB instance (local or Atlas)
-- Google OAuth credentials for Authentication
-- Telegram Bot Token (for sending alerts)
+### Database Schema
+WeatherGuard utilizes MongoDB as its primary database. The core entity in our system is the `User`, managed via Mongoose.
+
+**User Collection (`users`)**
+| Field | Type | Attributes | Description |
+|---|---|---|---|
+| `_id` | ObjectId | Auto-generated | Unique identifier |
+| `email` | String | Required, Unique | User's email address |
+| `oauthId` | String | Required, Unique | Google OAuth ID |
+| `name` | String | Required | Full name of the user |
+| `city` | String | Optional | Target city for weather alerts |
+| `role` | Enum | Default: `USER` | `SUPER_ADMIN`, `ADMIN`, or `USER` |
+| `status` | Enum | Default: `PENDING` | `PENDING`, `APPROVED`, `REJECTED`, or `REVOKED` |
+| `telegramChatId` | String | Optional | ID linked to the user's Telegram chat |
+| `hashedRefreshToken`| String | Optional | Stored hash of the JWT refresh token |
+| `createdAt` | Date | Auto-generated | Timestamp of creation |
+| `updatedAt` | Date | Auto-generated | Timestamp of last update |
+
+## Data Flow: Alerting Mechanism
+
+To ensure only explicitly **Approved** users receive automated weather alerts, WeatherGuard strictly adheres to a gatekept data flow:
+
+1. **Registration (Pending State):** When a user first logs in via Google Auth, they are assigned the `USER` role and `PENDING` status.
+2. **Admin Verification:** An `ADMIN` or `SUPER_ADMIN` logs into the Admin Dashboard to review the user.
+3. **Approval:** The admin changes the user's status to `APPROVED`.
+4. **Onboarding & Location:** The newly approved user provides their target `city`.
+5. **Telegram Linking:** The user connects their Telegram account, generating a valid `telegramChatId`.
+6. **Hourly Alert Dispatching:** 
+   - A server-side CRON job runs every hour.
+   - It queries the database exclusively for users where `status === 'APPROVED'`, `role === 'USER'`, and `telegramChatId` exists.
+   - The weather API fetches forecasts for each user's specified `city`.
+   - The payload is dispatched to Telegram.
+
+This design prevents unauthorized actors or revoked/rejected users from consuming API rate limits or receiving privileged data.
 
 ## Setup & Installation
 
+### Prerequisites
+- [Node.js](https://nodejs.org/) (v18 or higher recommended)
+- [npm](https://www.npmjs.com/) (v9 or higher recommended)
+- A MongoDB instance (local or Atlas)
+- Google OAuth credentials (Client ID and Secret)
+- Telegram Bot Token
+
 ### 1. Clone the repository
 ```bash
-git clone <your-repository-url>
+git clone https://github.com/anish-gupta6/WeatheGuard/
 cd WeatherGuard
 ```
 
@@ -33,7 +68,16 @@ cd api
 npm install
 ```
 
-Create a `.env` file in the `api/` directory based on the expected environment variables (e.g., `MONGO_URI`, `JWT_SECRET`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `TELEGRAM_BOT_TOKEN`, etc.).
+Create a `.env` file in the `api/` directory:
+```env
+# Example .env configuration
+MONGO_URI=mongodb://localhost:27017/weatherguard
+JWT_SECRET=your_jwt_secret
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+TELEGRAM_BOT_TOKEN=your_telegram_bot_token
+FRONTEND_URL=http://localhost:5173
+```
 
 To seed the initial super admin account, run:
 ```bash
@@ -52,7 +96,11 @@ cd ../frontend
 npm install
 ```
 
-Create a `.env` file in the `frontend/` directory and configure the environment variables (e.g., `VITE_API_URL`).
+Create a `.env` file in the `frontend/` directory:
+```env
+# Example .env configuration
+VITE_API_URL=http://localhost:3000
+```
 
 Start the frontend development server:
 ```bash
@@ -71,15 +119,14 @@ npm run dev
 ## Tech Stack
 
 **Frontend:**
-- React 18
-- TypeScript
+- React 18 (TypeScript)
 - Vite
 - TailwindCSS
 - React Router DOM
 - Lucide React (Icons)
 
 **Backend:**
-- Node.js
+- Node.js (TypeScript)
 - NestJS
 - MongoDB / Mongoose
 - JWT Authentication
