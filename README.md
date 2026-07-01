@@ -33,16 +33,21 @@ WeatherGuard utilizes MongoDB as its primary database. The core entity in our sy
 | `createdAt` | Date | Auto-generated | Timestamp of creation |
 | `updatedAt` | Date | Auto-generated | Timestamp of last update |
 
-## Data Flow: Alerting Mechanism
+## Data Flow
 
-To ensure only explicitly **Approved** users receive automated weather alerts, WeatherGuard strictly adheres to a gatekept data flow:
+### 1. User Approval & Real-Time Sync
 
 1. **Registration (Pending State):** When a user first logs in via Google Auth, they are assigned the `USER` role and `PENDING` status.
 2. **Admin Verification:** An `ADMIN` or `SUPER_ADMIN` logs into the Admin Dashboard to review the user.
-3. **Approval:** The admin changes the user's status to `APPROVED`.
-4. **Onboarding & Location:** The newly approved user provides their target `city`.
-5. **Telegram Linking:** The user connects their Telegram account, generating a valid `telegramChatId`.
-6. **Hourly Alert Dispatching:** 
+3. **Real-Time Action:** The admin approves or rejects the user. This action triggers a **Socket.IO** event, updating the dashboard in real-time for all connected administrators without requiring a page refresh.
+
+### 2. Alerting Mechanism
+
+To ensure only explicitly **Approved** users receive automated weather alerts, WeatherGuard strictly adheres to a gatekept data flow:
+
+1. **Onboarding & Location:** The newly approved user provides their target `city`.
+2. **Telegram Linking:** The user connects their Telegram account, generating a valid `telegramChatId`.
+3. **Hourly Alert Dispatching:** 
    - A server-side CRON job runs every hour.
    - It queries the database exclusively for users where `status === 'APPROVED'`, `role === 'USER'`, and `telegramChatId` exists.
    - The weather API fetches forecasts for each user's specified `city`.
@@ -61,7 +66,7 @@ This design prevents unauthorized actors or revoked/rejected users from consumin
 
 ### 1. Clone the repository
 ```bash
-git clone https://github.com/anish-gupta6/WeatheGuard/
+git clone https://github.com/anish-gupta6/WeatherGuard/
 cd WeatherGuard
 ```
 
@@ -114,8 +119,8 @@ npm run dev
 ## Features
 
 - **Invite-Only Access**: Secure access system where new users must be approved by an administrator before they can use the platform.
-- **Admin Dashboard**: A comprehensive dashboard to manage users, approve/reject access requests, and track pending invitations.
-- **Super Admin Support**: Dedicated super admin capabilities for managing other system administrators.
+- **Multi-Tier Admin System**: Role-based access control supporting `SUPER_ADMIN`, `ADMIN`, and `USER` roles. Super Admins can manage other administrators, while Admins manage user access requests.
+- **Real-Time Admin Dashboard**: A comprehensive dashboard powered by **Socket.IO** to manage users, approve/reject access requests, and track pending invitations with instant real-time updates.
 - **Google Authentication**: Seamless and secure sign-in using Google OAuth.
 - **Telegram Integration**: Direct integration with Telegram to push hourly, localized weather forecasts to users based on their selected city.
 - **Responsive Design**: A sleek, dark-themed responsive UI for both the administrative portal and onboarding flows.
@@ -128,6 +133,7 @@ npm run dev
 - TailwindCSS
 - React Router DOM
 - Lucide React (Icons)
+- Socket.IO Client
 
 **Backend:**
 - Node.js (TypeScript)
@@ -136,4 +142,4 @@ npm run dev
 - JWT Authentication
 - Google Auth Library
 - Telegraf (Telegram Bot API)
-
+- Socket.IO (Real-time updates)
