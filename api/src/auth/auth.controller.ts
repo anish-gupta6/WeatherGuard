@@ -20,7 +20,7 @@ export class AuthController {
   }
 
   @Get('google/callback')
-  async googleAuthRedirect(@Query('code') code: string, @Res({ passthrough: true }) res: Response) {
+  async googleAuthRedirect(@Query('code') code: string, @Res() res: Response) {
     if (!code) {
       throw new UnauthorizedException('No authorization code provided');
     }
@@ -29,23 +29,7 @@ export class AuthController {
       const tokens = await this.authService.loginWithCode(code);
 
       const frontendUrl = this.configService.get<string>('FRONTEND_URL');
-      
-      
-      res.cookie('access_token', tokens.accessToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        maxAge: 15 * 60 * 1000, 
-      });
-
-      res.cookie('refresh_token', tokens.refreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'none',
-        maxAge: 7 * 24 * 60 * 60 * 1000, 
-      });
-
-      res.status(HttpStatus.FOUND).redirect(`${frontendUrl}/auth-success`);
+      res.redirect(`${frontendUrl}/auth-success?accessToken=${tokens.accessToken}&refreshToken=${tokens.refreshToken}`);
     } catch (error) {
       this.logger.error(
         'OAuth callback failed',
@@ -58,31 +42,16 @@ export class AuthController {
 
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
-  async refreshTokens(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
-    const refreshToken = req.cookies['refresh_token'];
-    
+  async refreshTokens(@Body('refreshToken') refreshToken: string) {
     if (!refreshToken) {
       throw new UnauthorizedException('Refresh token missing');
     }
 
     const tokens = await this.authService.refreshTokens(refreshToken);
 
-      
-    res.cookie('access_token', tokens.accessToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: 15 * 60 * 1000, // 15 minutes
-    });
-
-    res.cookie('refresh_token', tokens.refreshToken, {
-      httpOnly: true,
-      secure: true,
-      sameSite: 'none',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
     return { 
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
       message: 'Tokens refreshed' 
     };
   }
@@ -90,14 +59,11 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response) {
+  async logout(@Req() req: Request) {
     const user = req['user'];
     if (user && user.id) {
       await this.authService.updateRefreshTokenHash(user.id, null);
     }
-
-    res.clearCookie('access_token');
-    res.clearCookie('refresh_token');
 
     return { message: 'Logged out successfully' };
   }

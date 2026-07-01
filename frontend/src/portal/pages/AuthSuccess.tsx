@@ -1,14 +1,23 @@
 import React, { useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import Cookies from 'js-cookie';
 
 const AuthSuccess: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Tokens are now set securely via HTTP-only cookies by the backend.
-    // We just need to redirect to the root which will handle subsequent routing.
+    const accessToken = searchParams.get('accessToken');
+    const refreshToken = searchParams.get('refreshToken');
+
+    if (accessToken && refreshToken) {
+      Cookies.set('access_token', accessToken, { expires: 1/96 }); // ~15 mins
+      Cookies.set('refresh_token', refreshToken, { expires: 7 }); // 7 days
+    }
+
+    // Always redirect to the root which will handle subsequent routing based on user state
     navigate('/', { replace: true });
-  }, [navigate]);
+  }, [searchParams, navigate]);
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0f1f16]">

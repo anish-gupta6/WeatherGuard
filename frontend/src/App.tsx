@@ -10,6 +10,7 @@ import ManageAdmins from './admin/pages/ManageAdmins';
 import ProtectedRoute from './portal/components/ProtectedRoute';
 import { useCallback, useEffect, useState } from 'react';
 import api from './services/api';
+import Cookies from 'js-cookie';
 
 function App() {
   const [user, setUser] = useState<any>(null);
@@ -20,6 +21,8 @@ function App() {
       await api.post('/auth/logout');
     } catch {
     }
+    Cookies.remove('access_token');
+    Cookies.remove('refresh_token');
     setUser(null);
     window.location.href = '/login';
   }, []);
